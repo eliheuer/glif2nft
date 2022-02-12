@@ -86,6 +86,12 @@ impl SVGPathPen {
         format!("{} {} {} {}", self.p(x), self.p(y), self.p(dx), self.p(dy))
     }
 
+    #[allow(non_snake_case)]
+    fn viewBox_str_temp_fix(&self) -> String {
+        let (x, y, dx, dy) = self.viewBox();
+        format!("{} {} {} {}", self.p(x), self.p(y), self.p(dx), self.p(dy))
+    }
+
     fn transform_x(&self, x: f32) -> f32 {
         x
     }
@@ -236,6 +242,12 @@ fn main() {
         svg.maxx = glif.width.unwrap_or(0) as f64;
     }
 
+    //TODO: This is a lazy temporary fix, fix this at some point.
+    svg.minx = 0.;
+    svg.maxx = 1024.;
+    svg.miny = 0.;
+    svg.maxy = 1024.;
+
     let mut svgxml = xmltree::Element::new("svg");
     let mut namespace = xmltree::Namespace::empty();
     for (k, v) in XMLNS.into_iter() {
@@ -248,9 +260,11 @@ fn main() {
             svgxml.attributes.insert(k, v);
         }
     } else {
-        svgxml.attributes.insert("viewBox".to_owned(), svg.viewBox_str());
+        svgxml.attributes.insert("viewBox".to_owned(), svg.viewBox_str_temp_fix());
     }
 
+    //let x_width = 1024;
+    //let y_height = 1024;
     let mut sodipodixml = xmltree::Element::new(NAMEDVIEW_IDENT);
     sodipodixml.attributes = NAMEDVIEW.into_iter().map(|(k, v)|((*k).to_owned(), (*v).to_owned())).collect();
     let mut xygridxml = xmltree::Element::new(XYGRID_IDENT);
@@ -284,7 +298,7 @@ fn main() {
         if outfile != "-" {
             fs::write(outfile, &outxml).unwrap();
             return
-        }   
+        }
     }
     println!("{}", stdstr::from_utf8(&outxml).unwrap());
 }
