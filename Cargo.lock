@@ -396,6 +396,7 @@ dependencies = [
 name = "glif2nft"
 version = "1.0.0"
 dependencies = [
+ "base64",
  "clap",
  "derivative",
  "float-cmp",

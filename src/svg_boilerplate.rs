@@ -15,8 +15,9 @@ pub static NAMEDVIEW_IDENT: &'static str = "sodipodi:namedview";
 pub static NAMEDVIEW: Phf<&'static str, &'static str> = map! {
     "pagecolor" => "#ffffff",
     "bordercolor" => "#666666",
-    "borderopacity" => "1.0",
-    "showgrid" => "true",
+    "borderopacity" => "1.0"
+    //"showgrid" => "true",
+    //"style" => "fill:red"
 };
 
 pub static XMLNS: Phf<&'static str, &'static str> = map! {

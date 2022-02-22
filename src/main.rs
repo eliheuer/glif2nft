@@ -1,12 +1,19 @@
 ///! glif2nft in Rust
 ///! (c) 2022 Eli Heuer and MFEK authors. See LICENSE.
-///! This is a fork of MFEKglif2svg
+///! This is a fork of MFEK::glif2svg
+///
+///! USAGE INFORMATION:
+///! This is a CLI program that takes a UFO .glif path as input
+///! and prints SVG art to the terminal as output.
+///! Try redirecting the output to a file, like so:
+///! $ cargo run ufos/PrintShoppe.ufo/glyphs/R_.glif > R.svg && open R.svg
 
 #[macro_use] extern crate derivative; // for better #[derive(…)]
 
 mod svg_boilerplate;
 use svg_boilerplate::*;
 
+use base64::{encode, decode};
 use glifparser;
 use glifparser::IntegerOrFloat;
 use glifparser::outline::skia::SkiaPointTransforms;
@@ -32,6 +39,10 @@ struct SVGPathPen {
     #[derivative(Default(value="4"))]
     precision: u8,
     no_viewbox: bool
+}
+
+fn print_type_of<T>(_: &T) {
+    println!("TYPE: {}", std::any::type_name::<T>())
 }
 
 fn consider_min_max(svg: &mut SVGPathPen, points: &[Point]) {
@@ -160,8 +171,8 @@ fn main() {
         .setting(AppSettings::ArgRequiredElseHelp)
         .setting(AppSettings::DeriveDisplayOrder)
         .version(env!("CARGO_PKG_VERSION"))
-        .author("Fredrick R. Brennan <copypasteⒶkittens⊙ph>; MFEK Authors")
-        .about("Convert between glif to SVG")
+        .author("Eli Heuer <elih@protonmail.com>; MFEK Authors")
+        .about("Convert between glif and SVG")
         .arg(Arg::with_name("input_file")
             .short("in")
             .long("input")
@@ -208,14 +219,16 @@ fn main() {
     let input = matches.value_of("input").unwrap_or_else(||matches.value_of("input_file").unwrap());
     let output = matches.value_of("output").or_else(||matches.value_of("output_file"));
     let no_viewbox = matches.is_present("no_viewbox");
+    //println!("NO_VIEWBOX: {}",no_viewbox);
     let no_metrics = matches.is_present("no_metrics");
     let fontinfo_o = matches.value_of("fontinfo");
 
     let glif: glifparser::Glif<()> = glifparser::glif::read_from_filename(matches.value_of("input").unwrap()).unwrap();
-
     let mut svg = SVGPathPen::new();
     svg.precision = matches.value_of("precision").unwrap().parse::<u8>().unwrap();
     svg.no_viewbox = no_viewbox;
+    //println!("{:?}", svg);
+    //print_type_of(&svg);
 
     if let (Ok(..), true) = (mfek_ipc::module::available("metadata".into(), "0.0.2-beta1"), !no_metrics) {
         let ipc_info = if let Some(fi) = fontinfo_o {
@@ -242,6 +255,14 @@ fn main() {
         svg.maxx = glif.width.unwrap_or(0) as f64;
     }
 
+    //println!("glyph width: {:?}", glif.width.unwrap_or(0) as f64);
+    let svg_width = 1024.0 as f32;
+    let glyph_width = glif.width.unwrap_or(0) as f32;
+    let glif_x_pos = (svg_width - glyph_width)/2.0;
+    //println!("svg_width: {}", svg_width);
+    //println!("glyph_width: {}", glyph_width);
+    //println!("glif_x_pos: {}", glif_x_pos);
+
     //TODO: This is a lazy temporary fix, fix this at some point.
     svg.minx = 0.;
     svg.maxx = 1024.;
@@ -250,8 +271,11 @@ fn main() {
 
     let mut svgxml = xmltree::Element::new("svg");
     let mut namespace = xmltree::Namespace::empty();
+    //println!("NAMESPACE TEST::::::::");
     for (k, v) in XMLNS.into_iter() {
         namespace.put(*k, *v);
+        //println!("k = {}", k);
+        //println!("v = {}", v);
     }
     svgxml.namespaces = Some(namespace);
     svgxml.attributes.insert("version".to_owned(), "1.1".to_owned());
@@ -263,17 +287,24 @@ fn main() {
         svgxml.attributes.insert("viewBox".to_owned(), svg.viewBox_str_temp_fix());
     }
 
-    //let x_width = 1024;
-    //let y_height = 1024;
     let mut sodipodixml = xmltree::Element::new(NAMEDVIEW_IDENT);
+    //println!("{:?}", sodipodixml.attributes);
     sodipodixml.attributes = NAMEDVIEW.into_iter().map(|(k, v)|((*k).to_owned(), (*v).to_owned())).collect();
-    let mut xygridxml = xmltree::Element::new(XYGRID_IDENT);
-    xygridxml.attributes = XYGRID.into_iter().map(|(k, v)|((*k).to_owned(), (*v).to_owned())).collect();
-    let mut guidexml = xmltree::Element::new("sodipodi:guide");
-    guidexml.attributes.insert("id".to_owned(), "baseline".to_owned());
-    guidexml.attributes.insert("position".to_owned(), format!("{:.2},{:.2}", 0.0, svg.miny.abs()));
-    guidexml.attributes.insert("orientation".to_owned(), "0.00,1.00".to_owned());
-    sodipodixml.children = vec![xmltree::XMLNode::Element(xygridxml), xmltree::XMLNode::Element(guidexml)];
+    //println!("{:?}", sodipodixml);
+    //println!("{:?}", sodipodixml.attributes);
+    sodipodixml.attributes.insert("pagecolor".to_owned(), "#000000".to_owned());
+    //println!("{:?}", sodipodixml.attributes);
+
+    //println!("{:?}", sodipodixml.attributes);
+    //print_type_of(&sodipodixml);
+
+    //let mut xygridxml = xmltree::Element::new(XYGRID_IDENT);
+    //xygridxml.attributes = XYGRID.into_iter().map(|(k, v)|((*k).to_owned(), (*v).to_owned())).collect();
+    //let mut guidexml = xmltree::Element::new("sodipodi:guide");
+    //guidexml.attributes.insert("id".to_owned(), "baseline".to_owned());
+    //guidexml.attributes.insert("position".to_owned(), format!("{:.2},{:.2}", 0.0, svg.miny.abs()));
+    //guidexml.attributes.insert("orientation".to_owned(), "0.00,1.00".to_owned());
+    //sodipodixml.children = vec![xmltree::XMLNode::Element(xygridxml), xmltree::XMLNode::Element(guidexml)];
     svgxml.children.push(xmltree::XMLNode::Element(sodipodixml));
 
     if let Some(ref o) = glif.outline.as_ref() {
@@ -284,6 +315,17 @@ fn main() {
     gxml.attributes.insert("id".to_owned(), "glyph".to_owned());
     let mut pathxml = xmltree::Element::new("path");
     pathxml.attributes.insert("d".to_owned(), svg.path);
+    pathxml.attributes.insert("style".to_owned(), "fill:#dddddd".to_string());
+
+    let glyph_transform_a = "translate(".to_string();
+    let glyph_transform_b = glif_x_pos.to_string();
+    let glyph_transform_c = ",-160)".to_string();
+    let glyph_transform_full = format!("{}{}{}",
+                                       glyph_transform_a,
+                                       glyph_transform_b,
+                                       glyph_transform_c);
+    pathxml.attributes.insert("transform".to_owned(), glyph_transform_full);
+
     gxml.children = vec![xmltree::XMLNode::Element(pathxml)];
     svgxml.children.push(xmltree::XMLNode::Element(gxml));
 
