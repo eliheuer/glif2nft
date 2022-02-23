@@ -1,15 +1,15 @@
 use phf::phf_ordered_map as map;
 use phf::OrderedMap as Phf;
 
-pub static XYGRID_IDENT: &'static str = "inkscape:grid";
-pub static XYGRID: Phf<&'static str, &'static str> = map! {
-    "id" => "grid№1",
-    "type" => "xygrid",
-    "dotted" => "false",
-    "enabled" => "true",
-    "visible" => "true",
-    "empspacing" => "10"
-};
+//pub static XYGRID_IDENT: &'static str = "inkscape:grid";
+//pub static XYGRID: Phf<&'static str, &'static str> = map! {
+//    "id" => "grid№1",
+//    "type" => "xygrid",
+//    "dotted" => "false",
+//    "enabled" => "true",
+//    "visible" => "true",
+//    "empspacing" => "10"
+//};
 
 pub static NAMEDVIEW_IDENT: &'static str = "sodipodi:namedview";
 pub static NAMEDVIEW: Phf<&'static str, &'static str> = map! {

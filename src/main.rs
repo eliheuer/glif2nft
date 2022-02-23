@@ -13,8 +13,7 @@
 mod svg_boilerplate;
 use svg_boilerplate::*;
 
-use base64::{encode, decode};
-use glifparser;
+use base64::encode;
 use glifparser::IntegerOrFloat;
 use glifparser::outline::skia::SkiaPointTransforms;
 use glifparser::outline::skia::ToSkiaPaths as _;
@@ -22,6 +21,7 @@ use clap::{self, App, AppSettings, Arg};
 use skia_safe::{Point, path::Verb};
 use skia_safe::path::Iter as SkIter;
 use mfek_ipc::{self, IPCInfo};
+use glifparser;
 use xmltree;
 
 use std::{fs, str as stdstr};
@@ -41,9 +41,9 @@ struct SVGPathPen {
     no_viewbox: bool
 }
 
-fn print_type_of<T>(_: &T) {
-    println!("TYPE: {}", std::any::type_name::<T>())
-}
+//fn print_type_of<T>(_: &T) {
+//    println!("TYPE: {}", std::any::type_name::<T>())
+//}
 
 fn consider_min_max(svg: &mut SVGPathPen, points: &[Point]) {
     for p in points {
@@ -91,11 +91,11 @@ impl SVGPathPen {
         ]
     }
 
-    #[allow(non_snake_case)]
-    fn viewBox_str(&self) -> String {
-        let (x, y, dx, dy) = self.viewBox();
-        format!("{} {} {} {}", self.p(x), self.p(y), self.p(dx), self.p(dy))
-    }
+    //#[allow(non_snake_case)]
+    //fn viewBox_str(&self) -> String {
+    //    let (x, y, dx, dy) = self.viewBox();
+    //    format!("{} {} {} {}", self.p(x), self.p(y), self.p(dx), self.p(dy))
+    //}
 
     #[allow(non_snake_case)]
     fn viewBox_str_temp_fix(&self) -> String {
@@ -219,7 +219,6 @@ fn main() {
     let input = matches.value_of("input").unwrap_or_else(||matches.value_of("input_file").unwrap());
     let output = matches.value_of("output").or_else(||matches.value_of("output_file"));
     let no_viewbox = matches.is_present("no_viewbox");
-    //println!("NO_VIEWBOX: {}",no_viewbox);
     let no_metrics = matches.is_present("no_metrics");
     let fontinfo_o = matches.value_of("fontinfo");
 
@@ -227,7 +226,6 @@ fn main() {
     let mut svg = SVGPathPen::new();
     svg.precision = matches.value_of("precision").unwrap().parse::<u8>().unwrap();
     svg.no_viewbox = no_viewbox;
-    //println!("{:?}", svg);
     //print_type_of(&svg);
 
     if let (Ok(..), true) = (mfek_ipc::module::available("metadata".into(), "0.0.2-beta1"), !no_metrics) {
@@ -255,13 +253,9 @@ fn main() {
         svg.maxx = glif.width.unwrap_or(0) as f64;
     }
 
-    //println!("glyph width: {:?}", glif.width.unwrap_or(0) as f64);
     let svg_width = 1024.0 as f32;
     let glyph_width = glif.width.unwrap_or(0) as f32;
     let glif_x_pos = (svg_width - glyph_width)/2.0;
-    //println!("svg_width: {}", svg_width);
-    //println!("glyph_width: {}", glyph_width);
-    //println!("glif_x_pos: {}", glif_x_pos);
 
     //TODO: This is a lazy temporary fix, fix this at some point.
     svg.minx = 0.;
@@ -271,11 +265,8 @@ fn main() {
 
     let mut svgxml = xmltree::Element::new("svg");
     let mut namespace = xmltree::Namespace::empty();
-    //println!("NAMESPACE TEST::::::::");
     for (k, v) in XMLNS.into_iter() {
         namespace.put(*k, *v);
-        //println!("k = {}", k);
-        //println!("v = {}", v);
     }
     svgxml.namespaces = Some(namespace);
     svgxml.attributes.insert("version".to_owned(), "1.1".to_owned());
@@ -288,16 +279,8 @@ fn main() {
     }
 
     let mut sodipodixml = xmltree::Element::new(NAMEDVIEW_IDENT);
-    //println!("{:?}", sodipodixml.attributes);
     sodipodixml.attributes = NAMEDVIEW.into_iter().map(|(k, v)|((*k).to_owned(), (*v).to_owned())).collect();
-    //println!("{:?}", sodipodixml);
-    //println!("{:?}", sodipodixml.attributes);
     sodipodixml.attributes.insert("pagecolor".to_owned(), "#000000".to_owned());
-    //println!("{:?}", sodipodixml.attributes);
-
-    //println!("{:?}", sodipodixml.attributes);
-    //print_type_of(&sodipodixml);
-
     //let mut xygridxml = xmltree::Element::new(XYGRID_IDENT);
     //xygridxml.attributes = XYGRID.into_iter().map(|(k, v)|((*k).to_owned(), (*v).to_owned())).collect();
     //let mut guidexml = xmltree::Element::new("sodipodi:guide");
@@ -335,6 +318,8 @@ fn main() {
     svgxml.write_with_config(&mut outxml, config).unwrap();
 
     outxml.push('\n' as u8);
+
+    let _out_base64 = encode(&outxml);
 
     if let Some(outfile) = output {
         if outfile != "-" {
